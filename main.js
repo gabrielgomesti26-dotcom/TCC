@@ -1,182 +1,180 @@
-console.log("JS carregou");
+console.log("🚀 Inicializando...");
 
-// =========================
-// IMPORTS
-// =========================
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 // =========================
-// UI
+// CONFIGURAÇÕES
 // =========================
-const streetContainer = document.getElementById("street-view");
-const btnFechar = document.getElementById("fecharSV");
-
-btnFechar.addEventListener("click", () => {
-  streetContainer.style.display = "none";
-});
+const RAIO_TERRA = 5;
+const TEXTURA_PATH = "/textures/earth.jpg";
+const API_KEY = "AIzaSyCSP5XJE4ukwdTR1ca-QILJ5xZsThikzQc";
 
 // =========================
-// CENA
+// CENA 3D
 // =========================
 const scene = new THREE.Scene();
-
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-camera.position.z = 10;
-camera.lookAt(0, 0, 0);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 15);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-
 renderer.domElement.style.position = "fixed";
 renderer.domElement.style.top = "0";
 renderer.domElement.style.left = "0";
-
 document.body.appendChild(renderer.domElement);
 
 // =========================
 // TERRA
 // =========================
-const geometry = new THREE.SphereGeometry(5, 64, 64);
-
+const geometry = new THREE.SphereGeometry(RAIO_TERRA, 64, 64);
 const textureLoader = new THREE.TextureLoader();
-const earthTexture = textureLoader.load("/textures/earth.jpg"); // sua imagem
+const material = new THREE.MeshBasicMaterial({ map: textureLoader.load(TEXTURA_PATH) });
+const earth = new THREE.Mesh(geometry, material);
+scene.add(earth);
 
-const material = new THREE.MeshBasicMaterial({
-  map: earthTexture
-});
-
-const sphere = new THREE.Mesh(geometry, material);
-scene.add(sphere);
-
-// 🔥 AJUSTE IMPORTANTE (alinha textura)
-sphere.rotation.y = Math.PI / 2;
+// =========================
+// MARCADOR (para mostrar onde clicou)
+// =========================
+const markerGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff3333 });
+const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+marker.visible = false;
+scene.add(marker);
 
 // =========================
 // CONTROLES
 // =========================
 const controls = new OrbitControls(camera, renderer.domElement);
-
-let isDragging = false;
-
-controls.addEventListener("start", () => {
-  isDragging = true;
-});
-
-controls.addEventListener("end", () => {
-  setTimeout(() => {
-    isDragging = false;
-  }, 50);
-});
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.5;
 
 // =========================
 // ANIMAÇÃO
 // =========================
 function animate() {
   requestAnimationFrame(animate);
-
-  sphere.rotation.y += 0.0008;
-
+  controls.update();
   renderer.render(scene, camera);
 }
-
 animate();
 
 // =========================
-// RAYCAST
+// STREET VIEW (IFRAME)
 // =========================
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
+function abrirStreetViewIframe(lat, lng) {
+  console.log("Abrindo iframe Street View em:", lat, lng);
 
-let bloqueado = false; // evita spam de clique
+  const old = document.getElementById("street-view-iframe");
+  if (old) old.remove();
 
-window.addEventListener("click", (event) => {
+  const container = document.createElement("div");
+  container.id = "street-view-iframe";
+  container.style.position = "fixed";
+  container.style.top = "0";
+  container.style.left = "0";
+  container.style.width = "100vw";
+  container.style.height = "100vh";
+  container.style.zIndex = "9999";
+  container.style.backgroundColor = "#000";
 
-  if (bloqueado) return;
+  const iframe = document.createElement("iframe");
+  iframe.style.width = "100%";
+  iframe.style.height = "100%";
+  iframe.style.border = "none";
+  iframe.src = `https://www.google.com/maps/embed/v1/streetview?key=${API_KEY}&location=${lat},${lng}&heading=0&pitch=0&fov=90`;
 
-  console.log("clicou geral");
+  const btn = document.createElement("button");
+  btn.innerText = "FECHAR";
+  btn.style.position = "absolute";
+  btn.style.top = "20px";
+  btn.style.right = "20px";
+  btn.style.zIndex = "10000";
+  btn.style.padding = "10px 20px";
+  btn.style.background = "white";
+  btn.style.border = "none";
+  btn.style.cursor = "pointer";
+  btn.onclick = () => container.remove();
 
-  if (isDragging) return;
-
-  const rect = renderer.domElement.getBoundingClientRect();
-
-  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-  raycaster.setFromCamera(mouse, camera);
-
-  const intersects = raycaster.intersectObject(sphere);
-
-  if (intersects.length > 0) {
-
-    console.log("ACERTOU A ESFERA");
-
-    const point = intersects[0].point;
-
-    const coords = converterParaLatLng(point);
-
-    console.log("Coords:", coords);
-
-    abrirStreetView(coords.lat, coords.lng);
-  }
-});
+  container.appendChild(iframe);
+  container.appendChild(btn);
+  document.body.appendChild(container);
+}
 
 // =========================
-// CONVERSÃO (AGORA CERTA)
+// CONVERSÃO UV → LAT/LNG
 // =========================
-function converterParaLatLng(point) {
-  const radius = sphere.geometry.parameters.radius;
-
-  const lat = Math.asin(point.y / radius) * (180 / Math.PI);
-
-  let lng = Math.atan2(point.z, point.x) * (180 / Math.PI);
-
+function uvParaLatLng(uv) {
+  const lng = (uv.x - 0.5) * 360;
+  const lat = (uv.y - 0.5) * 180;
   return { lat, lng };
 }
 
 // =========================
-// STREET VIEW (COM PROTEÇÃO)
+// VERIFICAR E ABRIR STREET VIEW (COM RAIO AMPLIADO)
 // =========================
-function abrirStreetView(lat, lng) {
-
+function verificarEAbrirStreetView(lat, lng) {
   if (!window.google || !google.maps) {
-    alert("Google Maps não carregou!");
+    alert("Google Maps ainda não carregou.");
     return;
   }
 
-  bloqueado = true;
-
   const service = new google.maps.StreetViewService();
-
   service.getPanorama(
-    { location: { lat, lng }, radius: 50000 },
+    { location: { lat, lng }, radius: 50000, source: google.maps.StreetViewSource.OUTDOOR },
     (data, status) => {
-
-      bloqueado = false;
-
       if (status === "OK") {
-
-        streetContainer.style.display = "block";
-
-        new google.maps.StreetViewPanorama(streetContainer, {
-          position: data.location.latLng,
-          pov: { heading: 0, pitch: 0 },
-          zoom: 1,
-        });
-
+        const pos = data.location.latLng;
+        console.log("✅ Panorama encontrado em:", pos.lat(), pos.lng());
+        abrirStreetViewIframe(pos.lat(), pos.lng());
       } else {
-        alert("Não tem Street View aqui 😢");
+        alert("❌ Não há Street View num raio de 200m deste ponto.");
       }
     }
   );
 }
 
 // =========================
-// TESTE (opcional)
+// DETECTOR DE DUPLO CLIQUE
 // =========================
-// abrirStreetView(-15.7942, -47.8822);
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+let clickTimer = null;
+const DUPLO_CLIQUE_INTERVALO = 250;
+
+window.addEventListener("click", (event) => {
+  if (clickTimer) {
+    clearTimeout(clickTimer);
+    clickTimer = null;
+
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(earth);
+
+    if (intersects.length > 0) {
+      const uv = intersects[0].uv;
+      if (!uv) return;
+
+      const pontoMundo = intersects[0].point;
+      marker.position.copy(pontoMundo);
+      marker.visible = true;
+
+      const { lat, lng } = uvParaLatLng(uv);
+      console.log(`🌍 Duplo clique: lat ${lat.toFixed(4)}, lng ${lng.toFixed(4)}`);
+
+      verificarEAbrirStreetView(lat, lng);
+    }
+
+    return;
+  }
+
+  clickTimer = setTimeout(() => {
+    clickTimer = null;
+  }, DUPLO_CLIQUE_INTERVALO);
+});
