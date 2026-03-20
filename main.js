@@ -49,7 +49,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 0.5;
+controls.autoRotateSpeed = 0.05;
 
 // =========================
 // ANIMAÇÃO
@@ -178,3 +178,71 @@ window.addEventListener("click", (event) => {
     clickTimer = null;
   }, DUPLO_CLIQUE_INTERVALO);
 });
+
+// ==========================================
+// MAPA AUXILIAR COM CAMADA DE COBERTURA
+// ==========================================
+
+let miniMapa = null;
+let coberturaAtiva = false;
+
+function ativarMapaCobertura() {
+  const container = document.getElementById('mapa-cobertura');
+  const miniMapaDiv = document.getElementById('mini-mapa');
+  
+  if (!miniMapa && window.google && google.maps) {
+    // Cria o mapa auxiliar
+    miniMapa = new google.maps.Map(miniMapaDiv, {
+      center: { lat: -15.7942, lng: -47.8822 }, // Brasil como centro inicial
+      zoom: 4,
+      disableDefaultUI: true, // remove todos os controles
+      gestureHandling: 'greedy', // permite arrastar
+      backgroundColor: 'transparent'
+    });
+    
+    // ADICIONA A CAMADA DE COBERTURA (LINHAS AZUIS DO STREET VIEW)
+    const streetViewLayer = new google.maps.StreetViewCoverageLayer();
+    streetViewLayer.setMap(miniMapa);
+    
+    console.log("✅ Camada de cobertura Street View ativada no mapa auxiliar");
+  }
+  
+  container.classList.add('visivel');
+  coberturaAtiva = true;
+}
+
+function desativarMapaCobertura() {
+  const container = document.getElementById('mapa-cobertura');
+  container.classList.remove('visivel');
+  coberturaAtiva = false;
+}
+
+// Botões para controlar o mapa de cobertura
+document.getElementById('fechar-cobertura').addEventListener('click', () => {
+  desativarMapaCobertura();
+});
+
+// Opcional: botão para ativar (você pode criar um botão no canto)
+// Se quiser um botão para mostrar/esconder as linhas:
+const btnMostrarCobertura = document.createElement('button');
+btnMostrarCobertura.innerText = '🗺️ Ver ruas com Street View';
+btnMostrarCobertura.style.position = 'fixed';
+btnMostrarCobertura.style.bottom = '20px';
+btnMostrarCobertura.style.left = '20px';
+btnMostrarCobertura.style.zIndex = '201';
+btnMostrarCobertura.style.padding = '8px 12px';
+btnMostrarCobertura.style.background = '#4285f4';
+btnMostrarCobertura.style.color = 'white';
+btnMostrarCobertura.style.border = 'none';
+btnMostrarCobertura.style.borderRadius = '8px';
+btnMostrarCobertura.style.cursor = 'pointer';
+btnMostrarCobertura.style.fontSize = '12px';
+btnMostrarCobertura.style.fontWeight = 'bold';
+btnMostrarCobertura.onclick = () => {
+  if (!coberturaAtiva) {
+    ativarMapaCobertura();
+  } else {
+    desativarMapaCobertura();
+  }
+};
+document.body.appendChild(btnMostrarCobertura);

@@ -4,14 +4,56 @@
   <meta charset="UTF-8">
   <title>Globo 3D com Street View</title>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    /* Estilo para o mini mapa (inicialmente invisível) */
+    #mapa-cobertura {
+      display: none; /* começa oculto */
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 300px;
+      height: 300px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      border: 2px solid rgba(255,255,255,0.5);
+      z-index: 200;
+      background: rgba(0,0,0,0.7);
+      transition: all 0.3s ease;
+    }
+    #mapa-cobertura.visivel {
+      display: block;
+    }
   </style>
 </head>
 <body>
-  <!-- API do Google Maps (necessária para o iframe) -->
+  <!-- Seu globo 3D será inserido aqui pelo Three.js -->
+  
+  <!-- Mini mapa com linhas azuis de cobertura Street View -->
+  <div id="mapa-cobertura">
+    <div id="mini-mapa" style="width: 100%; height: 100%;"></div>
+    <button id="fechar-cobertura" style="
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 10;
+    ">X</button>
+  </div>
+
+  <!-- API do Google Maps (carrega antes do seu código) -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCSP5XJE4ukwdTR1ca-QILJ5xZsThikzQc"></script>
 
-  <!-- Seu código principal -->
+  <!-- Seu código principal (Three.js + lógica) -->
   <script type="module" src="/main.js"></script>
 </body>
 </html>
